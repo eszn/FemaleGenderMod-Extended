@@ -4,6 +4,7 @@ import json
 import os
 import subprocess
 import time
+from source_fingerprint import fingerprint
 
 ROOT = Path(__file__).resolve().parents[1]
 FLAGS = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
@@ -31,10 +32,15 @@ for client in ['a', 'b']:
     run = ROOT / 'runs' / f'verification-{client}'
     run.mkdir(parents=True, exist_ok=True)
     (run / 'options.txt').write_text('onboardAccessibility:false\npauseOnLostFocus:false\nguiScale:2\ntutorialStep:none\nsoundCategory_master:0.0\nskipMultiplayerWarning:true\n')
+    (run / 'config').mkdir(exist_ok=True)
+    (run / 'config' / 'fml.toml').write_text('earlyWindowControl=false\nversionCheck=false\n')
 
 subprocess.run(GRADLE + ['compileGameTestJava', 'prepareVerificationServerRun', 'prepareVerificationARun', 'prepareVerificationBRun', '--no-daemon'],
                cwd=ROOT, check=True, creationflags=FLAGS)
 started = time.time()
+source_sha256=fingerprint(ROOT)
+success=False
+(LOGS/'result.json').write_text(json.dumps({'result':'RUNNING','source_sha256':source_sha256}))
 processes = []
 handles = []
 try:
@@ -54,8 +60,21 @@ try:
                 time.sleep(1)
             else:
                 raise TimeoutError('Test server did not start')
+        elif label == 'a':
+            # Stagger native graphics initialization; both clients still run together for the test.
+            deadline = time.monotonic() + 120
+            while time.monotonic() < deadline:
+                if 'BodyLabA joined the game' in (LOGS / 'server.log').read_text(errors='replace'):
+                    break
+                if process.poll() is not None:
+                    raise RuntimeError('First client exited during startup; see build/verification/a.log')
+                time.sleep(1)
+            else:
+                raise TimeoutError('First client did not finish graphics initialization and connect')
     deadline = time.monotonic() + 240
     while time.monotonic() < deadline:
+        if any(p.poll() is not None and p.returncode != 0 for p in processes):
+            raise RuntimeError('A verification process failed; see build/verification logs')
         if all(p.poll() is not None for p in processes):
             break
         time.sleep(1)
@@ -70,10 +89,21 @@ try:
         log = (LOGS / f'{client}.log').read_text(errors='replace')
         if 'Failed to render' in log or 'Critical injection failure' in log:
             raise RuntimeError(f'Client {client} logged a rendering failure')
-    (LOGS / 'result.json').write_text(json.dumps({'result': 'PASS', 'clients': 2, 'dedicated_server': True,
-        'desktop_automation': False, 'elapsed_seconds': round(time.time()-started, 2)}, indent=2))
+        if (ROOT / 'local-models/resources/assets/wildfire_gender/body/jenny-mesh.json').exists() and 'BODY_VERIFY_AUTHORED: jenny' not in log:
+            raise RuntimeError(f'Client {client} did not load the imported Jenny model')
+    for mode in range(3):
+        report=ROOT/f'runs/verification-a/verification/physics-{mode}.txt'
+        assert report.exists() and report.stat().st_mtime>=started and 'PASS' in report.read_text(), 'No fresh physics report'
+        for frame in range(160):
+            path=ROOT/f'runs/verification-a/verification/physics-{mode}/{frame:03d}.png'
+            assert path.exists() and path.stat().st_mtime>=started, f'Missing fresh framebuffer: {path}'
+    assert fingerprint(ROOT)==source_sha256, 'Source changed during runtime verification'
+    (LOGS / 'result.json').write_text(json.dumps({'result': 'PASS','source_sha256':source_sha256, 'clients': 2, 'dedicated_server': True, 'physics_capture_frames':480,
+        'desktop_automation': False,'graphics': 'system OpenGL', 'elapsed_seconds': round(time.time()-started, 2)}, indent=2))
+    success=True
     print('PASS: real dedicated server, two clients, profile/tracking synchronization, mesh and armor rendering.')
 finally:
+    if not success: (LOGS/'result.json').write_text(json.dumps({'result':'FAIL','source_sha256':source_sha256}))
     for process in processes:
         if process.poll() is None:
             if os.name == 'nt':

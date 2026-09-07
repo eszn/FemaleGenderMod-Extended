@@ -14,8 +14,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ModelPart.class)
-public abstract class ModelPartMixin {
+public abstract class ModelPartMixin implements BodyRenderContext.Cubes {
     @Shadow @Final private List<ModelPart.Cube> cubes;
+    public List<ModelPart.Cube> extended$cubes() { return cubes; }
     @Inject(method="compile",at=@At("HEAD"),cancellable=true)
     private void extended$compile(PoseStack.Pose pose, VertexConsumer consumer, int light, int overlay, int color, CallbackInfo ci) {
         BodyRenderContext context=BodyRenderContext.CURRENT.get();

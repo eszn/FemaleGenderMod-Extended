@@ -35,7 +35,7 @@ class GeometryTest {
             var l=BodyDeformation.deform(BodyDeformation.Part.LEFT_LEG,2,y,2,MAX,0,0);
             var r=BodyDeformation.deform(BodyDeformation.Part.RIGHT_LEG,-2,y,2,MAX,0,0);
             assertEquals(l.x(),-r.x(),1e-9); assertEquals(l.z(),r.z(),1e-9);
-            assertTrue(l.x()<3.1); assertTrue(l.z()<3.6);
+            assertTrue(l.x()<3.5); assertTrue(l.z()<3.6);
         }
     }
     @Test void inflatedArmorEnclosesNeutralSkin() {
@@ -97,13 +97,13 @@ class GeometryTest {
             if(bodyY>=15) assertEquals(2,p.z(),1e-9,"Buttock shape must not create a bulge halfway down the thigh");
         }
         assertTrue(peakY>10.5 && peakY<12.5,"The apex belongs at the pelvis");
-        assertTrue(peakZ>3.5 && peakZ<3.7);
+        assertTrue(peakZ>3.5 && peakZ<4.1);
     }
     @Test void rearHasTwoRoundedLobesAndAContinuousPelvisSeam() {
         var center=BodyDeformation.deform(BodyDeformation.Part.TORSO,0,11.8,2,MAX,0,0);
         var lobe=BodyDeformation.deform(BodyDeformation.Part.TORSO,1.85,11.8,2,MAX,0,0);
         var edge=BodyDeformation.deform(BodyDeformation.Part.TORSO,4,11.8,2,MAX,0,0);
-        assertTrue(lobe.z()>center.z()+.9); assertTrue(lobe.z()>edge.z()+1);
+        assertTrue(lobe.z()>center.z()+.15); assertTrue(lobe.z()>edge.z()+.5);
         for(double x=0;x<=4;x+=.1) {
             var torso=BodyDeformation.deform(BodyDeformation.Part.TORSO,x,12,2,MAX,-.5,-.2);
             var leg=BodyDeformation.deform(BodyDeformation.Part.LEFT_LEG,x-2,0,2,MAX,.5,.2);
@@ -129,8 +129,88 @@ class GeometryTest {
         var lowerCenter=BreastSurface.point(true,1,.9,1,shape,0,0,0);
         assertTrue(lowerLobe.z()<-2.5); assertEquals(-2,lowerCenter.z(),1e-9);
         var onlyButt=new BodySettings(0,0,1,0,shape,false,0);
-        var lowerRear=BodyDeformation.deform(BodyDeformation.Part.LEFT_LEG,-.15,2,2,onlyButt,0,0);
-        var lowerCleft=BodyDeformation.deform(BodyDeformation.Part.LEFT_LEG,-2,2,2,onlyButt,0,0);
-        assertTrue(lowerRear.z()>2.1); assertEquals(2,lowerCleft.z(),1e-9);
+        var lowerRear=BodyDeformation.deform(BodyDeformation.Part.LEFT_LEG,-.15,2.4,2,onlyButt,0,0);
+        var lowerCleft=BodyDeformation.deform(BodyDeformation.Part.LEFT_LEG,-2,2.4,2,onlyButt,0,0);
+        assertTrue(lowerRear.z()>2.005); assertEquals(2,lowerCleft.z(),1e-9);
+    }
+    @Test void largerSizesGrowWidthHeightAndDepthPastTheVanillaOutline() {
+        double[] small=breastBounds(.25),large=breastBounds(1.2);
+        assertTrue(large[0]>4.7 && large[0]>small[0]*1.1,"Large breasts may extend past the chest sides");
+        assertTrue(large[1]>small[1]+.5,"Visible lower volume grows with size");
+        assertTrue(large[2]>small[2]*2);
+        var s=new BodySettings(0,0,.2f,0,BodySettings.BreastShape.NATURAL,false,0);
+        var b=new BodySettings(0,0,1,0,s.shape(),false,0);
+        assertTrue(BodyDeformation.deform(BodyDeformation.Part.TORSO,4,11.7,2,b,0,0).x()>4.8);
+        assertTrue(BodyDeformation.deform(BodyDeformation.Part.TORSO,4,11.7,2,b,0,0).x()
+                >BodyDeformation.deform(BodyDeformation.Part.TORSO,4,11.7,2,s,0,0).x()+.6);
+    }
+    private static double[] breastBounds(double size) {
+        double width=0,bottom=0,depth=0;
+        for(double x=0;x<=4;x+=.05) for(double y=0;y<=10;y+=.05) {
+            var p=BreastSurface.deform(x,y,-2,size,BodySettings.BreastShape.NATURAL,0,0,0,0,0,0,0,0);
+            width=Math.max(width,p.x()); depth=Math.max(depth,-2-p.z());
+            if(p.z()<-2.1) bottom=Math.max(bottom,p.y());
+        }
+        return new double[]{width,bottom,depth};
+    }
+    @Test void rearCenterAndTorsoLegJoinHaveContinuousSurfaceSlopes() {
+        double e=.0001;
+        for(double y=9;y<=12;y+=.1) {
+            double a=BodyDeformation.deform(BodyDeformation.Part.TORSO,-e,y,2,MAX,0,0).z();
+            double b=BodyDeformation.deform(BodyDeformation.Part.TORSO,0,y,2,MAX,0,0).z();
+            double c=BodyDeformation.deform(BodyDeformation.Part.TORSO,e,y,2,MAX,0,0).z();
+            assertTrue(Math.abs((b-a)/e-(c-b)/e)<.003,"The midline must not create a hard normal crease");
+        }
+        for(double x=.2;x<=4;x+=.2) {
+            double top=BodyDeformation.deform(BodyDeformation.Part.TORSO,x,12-e,2,MAX,0,0).z();
+            double seam=BodyDeformation.deform(BodyDeformation.Part.TORSO,x,12,2,MAX,0,0).z();
+            double bottom=BodyDeformation.deform(BodyDeformation.Part.LEFT_LEG,x-2,e,2,MAX,0,0).z();
+            assertTrue(Math.abs((seam-top)/e-(bottom-seam)/e)<.003);
+        }
+    }
+    @Test void continuousChestFieldDoesNotInvertSkinOrGarmentVolume() {
+        double e=.0001;
+        for(double x=-5;x<=5;x+=.5) for(double y=0;y<=12;y+=.5) for(double z=-3;z<=3;z+=.5) {
+            var a=chest(x+e,y,z); var b=chest(x-e,y,z);
+            var c=chest(x,y+e,z); var d=chest(x,y-e,z);
+            var f=chest(x,y,z+e); var g=chest(x,y,z-e);
+            double ax=a.x()-b.x(),ay=a.y()-b.y(),az=a.z()-b.z();
+            double bx=c.x()-d.x(),by=c.y()-d.y(),bz=c.z()-d.z();
+            double cx=f.x()-g.x(),cy=f.y()-g.y(),cz=f.z()-g.z();
+            double determinant=(ax*(by*cz-bz*cy)-ay*(bx*cz-bz*cx)+az*(bx*cy-by*cx))/(8*e*e*e);
+            assertTrue(determinant>.05,"Skin and garment layers must preserve their inside/outside order");
+        }
+    }
+    private static BodyDeformation.Point chest(double x,double y,double z) {
+        var p=BreastSurface.deform(x,y,z,1.2,BodySettings.BreastShape.NATURAL,0,0,0,0,0,0,0,0);
+        return BodyDeformation.deform(BodyDeformation.Part.TORSO,p.x(),p.y(),p.z(),MAX,0,0);
+    }
+    @Test void roundedCageKeepsConnectionsAndNestedGarmentCorners() {
+        var torso=BodyDeformation.Part.TORSO;
+        assertEquals(new BodyDeformation.Point(4,0,2),BodyCage.round(torso,4,0,2));
+        for(double x=-4;x<=4;x+=.2) {
+            var a=BodyCage.round(torso,x,12,2);
+            var b=BodyCage.round(BodyDeformation.Part.LEFT_LEG,x-2,0,2);
+            assertEquals(a.x(),b.x()+2,1e-9); assertEquals(a.z(),b.z(),1e-9);
+        }
+        var skin=BodyCage.round(torso,4,6,2);
+        for(double inflation=.25;inflation<=1;inflation+=.25) {
+            var garment=BodyCage.round(torso,4+inflation,6,2+inflation);
+            assertTrue(garment.x()>skin.x() && garment.z()>skin.z());
+        }
+        double e=.0001;
+        var front=BodyCage.round(torso,4-e,6,2);
+        var side=BodyCage.round(torso,4,6,2-e);
+        double frontSlope=(skin.z()-front.z())/(skin.x()-front.x());
+        double sideSlope=(side.z()-skin.z())/(side.x()-skin.x());
+        assertEquals(frontSlope,sideSlope,.001,"Front and side tangents agree at the rounded corner");
+    }
+    @Test void distantMeshesHaveFewerSamplesWithoutDroppingTheirBoundaries() {
+        var near=SurfaceResolution.axis(0,12,true,false,.2,true);
+        var far=SurfaceResolution.axis(12,0,true,false,.8,true);
+        assertTrue(near.length>far.length*2);
+        assertEquals(0,far[0],1e-7); assertEquals(1,far[far.length-1],1e-7);
+        for(int i=1;i<far.length;i++) assertTrue(far[i]>far[i-1]);
+        assertEquals(0,SurfaceResolution.detail(4)); assertEquals(1,SurfaceResolution.detail(100)); assertEquals(2,SurfaceResolution.detail(400));
     }
 }

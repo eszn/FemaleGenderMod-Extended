@@ -2,48 +2,56 @@ package com.wildfire.physics;
 
 import com.wildfire.main.entitydata.BodySettings.BreastShape;
 
-/** Paired smooth volumes with a shared medial attachment and a separate upper/lower pole profile. */
+/** Continuous chest-wall deformation with a sloping upper pole and broad, rounded lower volume. */
 public final class BreastSurface {
     private BreastSurface() {}
-    private static double lobe(double x,double v,double center,BreastShape shape) {
-        double lateral=(x-center)/2.15;
-        if(Math.abs(lateral)>=1) return 0;
-        double extent=Math.sqrt(1-lateral*lateral);
-        double t=.5+(v-.5)/extent;
-        if(t<=0 || t>=1) return 0;
+    public static double height(double size) { return 3.2+2.2*Math.clamp(size,0,1.2); }
+    private static double lobe(double x,double y,double center,double size,BreastShape shape) {
+        double radius=1.3+.45*size;
+        double d=(x-center)/radius;
+        double cross=Math.exp(-d*d);
+        double span=height(size)*(.70+.30*cross);
+        double top=1.55+height(size)*.12*(1-cross);
+        double v=(y-top)/span;
+        if(v<=0 || v>=1) return 0;
+        double peak=shape==BreastShape.NATURAL?.60:.48;
         double pole;
-        if(shape==BreastShape.NATURAL) {
-            double peak=.58;
-            if(t<=peak) pole=BodyDeformation.smooth(t/peak);
-            else {
-                double lower=(t-peak)/(1-peak);
-                pole=Math.sqrt(Math.max(0,1-lower*lower))*BodyDeformation.smooth((1-lower)/.18);
-            }
+        if(v<peak) {
+            double upper=v/peak;
+            pole=shape==BreastShape.NATURAL?BodyDeformation.smooth(upper):Math.sin(upper*Math.PI/2);
         } else {
-            double round=2*t-1;
-            pole=Math.sqrt(Math.max(0,1-round*round))*BodyDeformation.smooth((1-Math.abs(round))/.18);
+            double lower=(v-peak)/(1-peak);
+            double round=1-Math.pow(lower,4);
+            pole=round*round;
         }
-        return extent*pole*BodyDeformation.smooth((1-lateral*lateral)/.2);
+        return cross*pole;
     }
-    public static BodyDeformation.Point point(boolean left, double u, double v, double size, BreastShape shape,
-                                               double lateral, double vertical, double inflate) {
+    public static BodyDeformation.Point deform(double x,double y,double z,double size,BreastShape shape,
+            double leftX,double leftY,double rightX,double rightY,double offsetX,double offsetY,double offsetZ,double cleavage) {
+        size=Math.clamp(size,0,1.2);
+        if(size==0) return new BodyDeformation.Point(x,y,z);
+        // All front and side faces share this field. There is no attached rim or duplicate chest plane.
+        double front=BodyDeformation.smooth((2-z)/4);
+        double a=lobe(x,y,-1.65,size,shape),b=lobe(x,y,1.65,size,shape);
+        double volume=Math.pow(a*a*a*a+b*b*b*b,.25);
+        double depth=2.65*size*volume*front;
+        double t=(y-1.55)/height(size);
+        double envelope=t<=0 || t>=1?0:Math.pow(Math.sin(Math.PI*t),2);
+        double mobile=volume*front*BodyDeformation.smooth(Math.abs(x)/.8);
+        double side=x<0?-1:1;
+        double dx=x<0?leftX:rightX,dy=x<0?leftY:rightY;
+        return new BodyDeformation.Point(
+                x*(1+.22*size*envelope*front)+dx*mobile-side*offsetX*mobile
+                        +side*depth*Math.sin(Math.toRadians(cleavage*100))*BodyDeformation.smooth(Math.abs(x)/.8),
+                y+(dy-offsetY)*mobile,z-depth+offsetZ*mobile);
+    }
+    public static BodyDeformation.Point point(boolean left,double u,double v,double size,BreastShape shape,
+            double lateral,double vertical,double inflate) {
         return point(left,u,v,size,shape,lateral,vertical,inflate,0,0,0,0);
     }
-    public static BodyDeformation.Point point(boolean left, double u, double v, double size, BreastShape shape,
-                                               double lateral, double vertical, double inflate,
-                                               double offsetX, double offsetY, double offsetZ, double cleavage) {
-        double x = (left ? -4 : 0)+u*4;
-        // Elliptical attachment footprints give each lower contour its own rounded outline.
-        // A smooth union joins overlapping medial surfaces without a gap or double volume.
-        double a=lobe(x,v,1.85,shape),b=lobe(x,v,-1.85,shape);
-        double dome=Math.pow(a*a*a*a+b*b*b*b,.25);
-        double depth=Math.clamp(size,0,1.2)*2.65*dome;
-        // The two halves share a shallow chest bridge. Opposite spring phases must not split it.
-        double mobile=dome*BodyDeformation.smooth(Math.abs(x)/.85);
-        double y=2.1+v*5.7;
-        x=x*(1+inflate/4)+lateral*mobile+(left?1:-1)*offsetX*mobile
-                +(left?-1:1)*depth*Math.sin(Math.toRadians(cleavage*100))*BodyDeformation.smooth(Math.abs(x)/.85);
-        y=5+(y-5)*(1+inflate/6)+(vertical-offsetY)*mobile;
-        return new BodyDeformation.Point(x,y,-2-inflate-depth+offsetZ*mobile);
+    public static BodyDeformation.Point point(boolean left,double u,double v,double size,BreastShape shape,
+            double lateral,double vertical,double inflate,double offsetX,double offsetY,double offsetZ,double cleavage) {
+        return deform((left?-4:0)+u*4,1.55+v*height(size),-2-inflate,size,shape,
+                lateral,vertical,lateral,vertical,offsetX,offsetY,offsetZ,cleavage);
     }
 }

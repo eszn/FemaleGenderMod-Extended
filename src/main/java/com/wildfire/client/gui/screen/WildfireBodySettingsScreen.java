@@ -29,24 +29,27 @@ public final class WildfireBodySettingsScreen extends BaseWildfireScreen {
         slider("Buttock fullness",ClientConfiguration.BUTTOCKS,s.buttocks(),x,y+46,v->change(2,(float)v));
         slider("Waist taper",ClientConfiguration.WAIST,s.waist(),x,y+69,v->change(3,(float)v));
         slider("Secondary motion",ClientConfiguration.BODY_MOTION,s.motion(),x,y+92,v->change(4,(float)v));
-        addRenderableWidget(Button.builder(Component.literal("Breast model: "+label(s.shape())),button->{
+        addRenderableWidget(Button.builder(Component.literal("Body model: "+label(s.shape())),button->{
             BodySettings now=player.getBodySettings();
             var shape=BodySettings.BreastShape.values()[(now.shape().ordinal()+1)%3];
             player.updateBodySettings(new BodySettings(now.hips(),now.thighs(),now.buttocks(),now.waist(),shape,now.physics(),now.motion()));
-            button.setMessage(Component.literal("Breast model: "+label(shape))); PlayerConfig.saveGenderInfo(player);
+            button.setMessage(Component.literal("Body model: "+label(shape))); PlayerConfig.saveGenderInfo(player);
         }).bounds(x,y+115,170,20).build());
         addRenderableWidget(Button.builder(Component.literal("Body physics: "+(s.physics()?"On":"Off")),button->{
             BodySettings now=player.getBodySettings();
             player.updateBodySettings(new BodySettings(now.hips(),now.thighs(),now.buttocks(),now.waist(),now.shape(),!now.physics(),now.motion()));
             button.setMessage(Component.literal("Body physics: "+(!now.physics()?"On":"Off"))); PlayerConfig.saveGenderInfo(player);
         }).bounds(x,y+138,170,20).build());
-        addRenderableWidget(Button.builder(Component.literal("Natural preset"),button->{
-            player.updateBodySettings(BodySettings.DEFAULT); PlayerConfig.saveGenderInfo(player); rebuildWidgets();
+        boolean imported=com.wildfire.client.render.AuthoredModel.get()!=null;
+        addRenderableWidget(Button.builder(Component.literal(imported?"Jenny preset":"Natural preset"),button->{
+            player.updateBodySettings(imported?new BodySettings(.5f,.5f,.5f,.5f,BodySettings.BreastShape.NATURAL,true,.5f):BodySettings.DEFAULT);
+            if(imported) player.updateBustSize(.8f);
+            PlayerConfig.saveGenderInfo(player); rebuildWidgets();
         }).bounds(width/2-160,y+138,140,20).build());
         addRenderableWidget(Button.builder(Component.literal("Done"),button->onClose()).bounds(x,y+164,170,20).build());
     }
-    private static String label(BodySettings.BreastShape shape) {
-        return switch(shape) { case CLASSIC->"Classic"; case ROUNDED->"Rounded"; case NATURAL->"Natural"; };
+    public static String label(BodySettings.BreastShape shape) {
+        return switch(shape) { case CLASSIC->"Classic"; case ROUNDED->"Rounded"; case NATURAL->com.wildfire.client.render.AuthoredModel.get()!=null?"Jenny":"Natural"; };
     }
     private void slider(String name, FloatConfigKey key, float value, int x, int y, DoubleConsumer change) {
         var slider=addRenderableWidget(new WildfireSlider(x,y,170,20,key,value,v->change.accept(v),

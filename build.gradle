@@ -25,6 +25,8 @@ sourceSets {
         resources {
             //Add the generated main module resources
             srcDirs += 'src/datagen/generated'
+            // Optional geometry converted from a user-supplied character archive.
+            srcDirs += 'local-models/resources'
             //But exclude the cache of the generated data from what gets built
             exclude '.cache'
         }

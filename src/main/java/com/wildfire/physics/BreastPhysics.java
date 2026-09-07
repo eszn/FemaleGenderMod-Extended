@@ -48,16 +48,9 @@ public class BreastPhysics {
                 || entity instanceof ArmorStand || entity.isSleeping()) {
             vertical.reset(); lateral.reset(); rotation.reset(); return;
         }
-        // Larger supported volume responds more slowly, with bounded excursion. Armor cannot jiggle as flesh.
-        double gain = Math.clamp(config.getBounceMultiplier()*3, 0, 1.5) * (1-support);
-        if (entity.isInWater()) gain *= .35;
-        double frequency = 4.8 - 1.2*Math.clamp(target, 0, 1.2) + support*3;
-        double damping = .65 + .22*(1-config.getFloppiness()) + support*.55;
-        double limit = (.18 + .65*target)*gain;
-        double gait = entity.onGround() && !entity.isPassenger() ? Math.sin(entity.walkAnimation.position()*2+side*.12)*Math.min(entity.walkAnimation.speed(),1)*65 : 0;
-        vertical.tick((motion.vertical()*16+gait)*gain,frequency,damping,limit);
-        lateral.tick((-motion.lateral()*12-motion.turn()*.6)*gain,frequency+.8,damping+.1,limit*.5);
-        rotation.tick(motion.turn()*.7*gain,frequency+1,damping+.1,4*gain);
+        var response=SecondaryMotion.breast(motion,target,config.getBounceMultiplier(),config.getFloppiness(),side,support,
+                entity.isInWater(),entity.onGround() && !entity.isPassenger(),entity.walkAnimation.position(),entity.walkAnimation.speed());
+        response.first().tick(vertical); response.second().tick(lateral); response.third().tick(rotation);
     }
     public float getBreastSize(float partial) { return previousSize + (size-previousSize)*Math.clamp(partial,0,1); }
     // Legacy renderer expects half-pixel units.

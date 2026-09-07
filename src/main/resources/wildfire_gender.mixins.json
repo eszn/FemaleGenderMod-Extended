@@ -3,7 +3,7 @@
   "minVersion": "0.8.7",
   "package": "com.wildfire.mixin",
   "compatibilityLevel": "JAVA_21",
-  "client": ["PlayerRenderMixin", "ModelPartMixin", "ArmorModelMixin"],
+  "client": ["PlayerRenderMixin", "ModelPartMixin", "ArmorModelMixin", "PlayerModelMixin"],
   "injectors": {"defaultRequire": 1},
   "overwrites": {"requireAnnotations": true}
 }

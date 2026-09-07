@@ -112,7 +112,7 @@ public class GenderLayer<ENTITY extends LivingEntity, MODEL extends HumanoidMode
             EntityConfig entityConfig = EntityConfig.getEntity(entity);
 			if(entityConfig == null) return;
             if (entity instanceof AbstractClientPlayer player && entityConfig.getBodySettings().shape() != com.wildfire.main.entitydata.BodySettings.BreastShape.CLASSIC) {
-                RoundedBreastRenderer.render(matrixStack, bufferSource, light, player, getParentModel(), entityConfig, partialTicks, armorTrimAtlas);
+                // Rounded profiles are part of the torso itself, including its normal armor/overlay passes.
                 return;
             }
 			ItemStack armorStack = entity.getItemBySlot(EquipmentSlot.CHEST);
@@ -374,7 +374,7 @@ public class GenderLayer<ENTITY extends LivingEntity, MODEL extends HumanoidMode
 		Matrix3f matrix3f =	matrixStack.last().normal();
 		for (WildfireModelRenderer.TexturedQuad quad : model.quads) {
 			Vector3f vector3f = new Vector3f(quad.normal.getX(), quad.normal.getY(), quad.normal.getZ());
-			vector3f.mul(matrix3f);
+			vector3f.mul(matrix3f).normalize();
 			for (PositionTextureVertex vertex : quad.vertexPositions) {
 				bufferIn.addVertex(matrix4f, vertex.x() / 16.0F, vertex.y() / 16.0F, vertex.z() / 16.0F)
 					.setColor(color)
