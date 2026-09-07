@@ -36,7 +36,7 @@ public abstract class AbstractSyncPacket implements IWildfirePacket {
         return NeoForgeStreamCodecs.composite(
               UUIDUtil.STREAM_CODEC, packet -> packet.uuid,
               Gender.STREAM_CODEC, packet -> packet.gender,
-              ByteBufCodecs.FLOAT, packet -> packet.bustSize,
+              ByteBufCodecs.FLOAT, packet -> Math.min(packet.bustSize, .8f),
               ByteBufCodecs.BOOL, packet -> packet.hurtSounds,
               ByteBufCodecs.FLOAT, packet -> packet.voicePitch,
               BreastPhysics.STREAM_CODEC, packet -> packet.breastPhysics,
@@ -69,7 +69,7 @@ public abstract class AbstractSyncPacket implements IWildfirePacket {
 
     protected void updatePlayerFromPacket(PlayerConfig plr) {
         plr.updateGender(gender);
-        plr.updateBustSize(bustSize);
+        if (!plr.hasExtendedProfile) plr.updateBustSize(bustSize);
         plr.updateHurtSounds(hurtSounds);
         plr.updateVoicePitch(voicePitch);
         breastPhysics.updatePlayer(plr);

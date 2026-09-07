@@ -52,7 +52,7 @@ public record BreastDataComponent(float breastSize, float cleavage, Vector3f off
     private static final String KEY = "WildfireGender";
 
     private static Codec<Float> boundedFloat(FloatConfigKey configKey) {
-        return Codec.FLOAT.xmap(val -> Mth.clamp(val, configKey.getMinInclusive(), configKey.getMaxInclusive()), Function.identity());
+        return Codec.FLOAT.xmap(val -> Float.isFinite(val) ? Mth.clamp(val, configKey.getMinInclusive(), configKey.getMaxInclusive()) : configKey.getDefault(), Function.identity());
     }
 
     private static final Codec<BreastDataComponent> CODEC = RecordCodecBuilder.create(instance -> instance.group(

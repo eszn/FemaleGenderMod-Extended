@@ -276,6 +276,11 @@ public class WildfireGenderClient {
             PacketDistributor.sendToServer(new ServerboundSyncPacket(clientConfig));
             clientConfig.needsSync = false;
         }
+        if (clientConfig != null && clientConfig.needsBodySync && timer % 5 == 0 && connection != null
+                && connection.hasChannel(com.wildfire.main.networking.BodySync.Serverbound.TYPE)) {
+            PacketDistributor.sendToServer(new com.wildfire.main.networking.BodySync.Serverbound(new com.wildfire.main.networking.BodySync.Profile(clientConfig)));
+            clientConfig.needsBodySync = false;
+        }
 
         if (timer % 40 == 0) {
             CloudSync.sendNextQueueBatch();

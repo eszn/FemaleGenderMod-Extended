@@ -26,7 +26,16 @@ public class ClientConfiguration extends Configuration {
 
     public static final UUIDConfigKey USERNAME = new UUIDConfigKey("username", UUID.nameUUIDFromBytes("UNKNOWN".getBytes(StandardCharsets.UTF_8)));
     public static final EnumConfigKey<Gender> GENDER = new EnumConfigKey<>("gender", Gender.MALE, Gender.BY_ID);
-    public static final FloatConfigKey BUST_SIZE = new FloatConfigKey("bust_size", 0.6F, 0, 0.8f);
+    public static final FloatConfigKey BUST_SIZE = new FloatConfigKey("bust_size", 0.6F, 0, 1.2f);
+    public static final FloatConfigKey HIPS = new FloatConfigKey("body_hips", .3f, 0, 1);
+    public static final FloatConfigKey THIGHS = new FloatConfigKey("body_thighs", .25f, 0, 1);
+    public static final FloatConfigKey BUTTOCKS = new FloatConfigKey("body_buttocks", .3f, 0, 1);
+    public static final FloatConfigKey WAIST = new FloatConfigKey("body_waist", .25f, 0, 1);
+    public static final FloatConfigKey BODY_MOTION = new FloatConfigKey("body_motion", .5f, 0, 1);
+    public static final BooleanConfigKey BODY_PHYSICS = new BooleanConfigKey("body_physics", true);
+    public static final EnumConfigKey<com.wildfire.main.entitydata.BodySettings.BreastShape> BREAST_SHAPE = new EnumConfigKey<>(
+            "breast_shape", com.wildfire.main.entitydata.BodySettings.BreastShape.NATURAL,
+            i -> com.wildfire.main.entitydata.BodySettings.BreastShape.values()[Math.clamp(i, 0, 2)]);
     public static final BooleanConfigKey HURT_SOUNDS = new BooleanConfigKey("hurt_sounds", true);
 
     public static final FloatConfigKey BREASTS_OFFSET_X = new FloatConfigKey("breasts_xOffset", 0.0F, -1, 1);

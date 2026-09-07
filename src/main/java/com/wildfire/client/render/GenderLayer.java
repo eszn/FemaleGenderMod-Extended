@@ -111,6 +111,10 @@ public class GenderLayer<ENTITY extends LivingEntity, MODEL extends HumanoidMode
 		try {
             EntityConfig entityConfig = EntityConfig.getEntity(entity);
 			if(entityConfig == null) return;
+            if (entity instanceof AbstractClientPlayer player && entityConfig.getBodySettings().shape() != com.wildfire.main.entitydata.BodySettings.BreastShape.CLASSIC) {
+                RoundedBreastRenderer.render(matrixStack, bufferSource, light, player, getParentModel(), entityConfig, partialTicks, armorTrimAtlas);
+                return;
+            }
 			ItemStack armorStack = entity.getItemBySlot(EquipmentSlot.CHEST);
 			//Note: When the stack is empty the helper will fall back to an implementation that returns the proper data
 			IGenderArmor genderArmor = WildfireHelper.getArmorConfig(armorStack);
@@ -275,7 +279,7 @@ public class GenderLayer<ENTITY extends LivingEntity, MODEL extends HumanoidMode
 			float rotation = breastSize;
 			if (bounceEnabled) {
 				matrixStack.translate(0, -0.035f * breastSize, 0); //shift down to correct position
-				rotation = -physPositionY / 12f;
+				rotation = breastSize - physPositionY / 12f;
 			}
 			rotation = Math.min(rotation, breastSize + 0.2f);
 			rotation = Math.min(rotation, 1); //hard limit for MAX
@@ -297,6 +301,8 @@ public class GenderLayer<ENTITY extends LivingEntity, MODEL extends HumanoidMode
 
 			matrixStack.mulPose(rotationTransform);
 			matrixStack.scale(0.9995f, 1f, 1f); //z-fighting FIXXX
+            float expandedSize = Math.max(1, EntityConfig.getEntity(entity).getBustSize() / .8f);
+            matrixStack.scale(1, 1 + .1f * (expandedSize - 1), expandedSize);
 
 			renderBreast(entity, armorStack, matrixStack, bufferSource, breastRenderType, light, overlay, alpha, left, hasJacketLayer);
 		} catch(Exception e) {

@@ -75,7 +75,6 @@ group = project.maven_group
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of("${java_version}"))
-        vendor.set(JvmVendorSpec.JETBRAINS)
     }
     withSourcesJar()
 }
@@ -145,9 +144,57 @@ neoForge.runs {
 }
 
 repositories {
+    mavenCentral()
 }
 
 dependencies {
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+sourceSets.test.compileClasspath += sourceSets.main.compileClasspath + sourceSets.api.output
+sourceSets.test.runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.api.output
+tasks.withType(Test).configureEach { useJUnitPlatform() }
+
+sourceSets {
+    gameTest {
+        compileClasspath += sourceSets.main.output + sourceSets.api.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.api.output + sourceSets.main.runtimeClasspath
+    }
+}
+neoForge {
+    addModdingDependenciesTo(sourceSets.gameTest)
+    mods { wildfire_gender_test { sourceSet(sourceSets.gameTest) } }
+    runs {
+        gameTestServer {
+            type = 'gameTestServer'
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'wildfire_gender'
+            gameDirectory = file('runs/gametest')
+        }
+        verificationServer {
+            server()
+            gameDirectory = file('runs/verification-server')
+            programArguments.add '--nogui'
+            systemProperty 'wildfire.verify', 'server'
+        }
+        verificationA {
+            client()
+            gameDirectory = file('runs/verification-a')
+            programArguments.addAll '--username', 'BodyLabA', '--quickPlayMultiplayer', '127.0.0.1:25589', '--width', '960', '--height', '720'
+            systemProperty 'wildfire.verify', 'a'
+        }
+        verificationB {
+            client()
+            gameDirectory = file('runs/verification-b')
+            programArguments.addAll '--username', 'BodyLabB', '--quickPlayMultiplayer', '127.0.0.1:25589', '--width', '960', '--height', '720'
+            systemProperty 'wildfire.verify', 'b'
+        }
+    }
+}
+
+neoForge.runs.configureEach {
+    if (name != 'data') loadedMods = [neoForge.mods.wildfire_gender, neoForge.mods.wildfire_gender_test]
 }
 
 def replaceResources = tasks.register('replaceResources', Copy) {
@@ -212,6 +259,7 @@ tasks.named('jar', Jar) {
     duplicatesStrategy = DuplicatesStrategy.FAIL
     from([sourceSets.api.output, sourceSets.main.output])
     manifest.attributes(getManifestAttributes())
+    from('LICENSE', 'LICENSE-GPL')
 }
 
 def sourcesJar = tasks.named('sourcesJar', Jar) {

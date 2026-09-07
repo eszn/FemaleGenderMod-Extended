@@ -118,6 +118,8 @@ public class WildfireGender {
         modEventBus.addListener(WildfireHelper::registerPackets);
         NeoForge.EVENT_BUS.addListener(this::onStartTracking);
         NeoForge.EVENT_BUS.addListener(this::onStopTracking);
+        NeoForge.EVENT_BUS.addListener(com.wildfire.main.networking.BodySync::tick);
+        NeoForge.EVENT_BUS.addListener(this::onLogout);
         NeoForge.EVENT_BUS.addListener(EventPriority.HIGHEST, this::onEntitySpawn);
         NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, this::onRightClickArmorStand);
     }
@@ -153,6 +155,7 @@ public class WildfireGender {
             // we wouldn't sync while they're out of tracking distance, and as such, their settings would be out
             // of sync until they relog.
             PacketDistributor.sendToPlayer(sendTo, new ClientboundSyncPacket(genderToSync));
+            com.wildfire.main.networking.BodySync.send(sendTo, genderToSync);
         }
     }
 
@@ -163,6 +166,16 @@ public class WildfireGender {
             if (trackers != null && trackers.remove(sendTo) && trackers.isEmpty()) {
                 trackedPlayers.remove(uuid);
             }
+        }
+    }
+
+    private void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            trackedPlayers.remove(player.getUUID());
+            trackedPlayers.values().forEach(trackers -> trackers.remove(player));
+            trackedPlayers.values().removeIf(Set::isEmpty);
+            com.wildfire.main.networking.BodySync.forget(player);
+            CACHE.invalidate(player.getUUID());
         }
     }
 

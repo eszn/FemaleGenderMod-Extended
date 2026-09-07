@@ -20,6 +20,9 @@ classes/
 #Minecraft
 run/
 runs/
+logs/
+dist/
+__pycache__/
 
 # vscode
 

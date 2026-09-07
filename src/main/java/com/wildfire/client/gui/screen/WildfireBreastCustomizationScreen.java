@@ -101,6 +101,10 @@ public class WildfireBreastCustomizationScreen extends BaseWildfireScreen {
         //Set default visibilities
         updateTab(Tab.CUSTOMIZATION);
 
+        addRenderableWidget(net.minecraft.client.gui.components.Button.builder(Component.literal("Body shape & motion"),
+                button -> minecraft.setScreen(new WildfireBodySettingsScreen(this, playerUUID)))
+                .bounds(this.width / 2 - 36, this.height / 2 + 92, 166, 20).build());
+
         super.init();
     }
 

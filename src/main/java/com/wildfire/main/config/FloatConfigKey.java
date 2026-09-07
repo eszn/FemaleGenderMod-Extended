@@ -37,7 +37,13 @@ public class FloatConfigKey extends NumberConfigKey<Float> {
         // note that we clamp float values instead of allowing them to be reset to their default to
         // be a bit more user-friendly if the min/max value for this key is modified, and the player's
         // previous config value would now be outside the allowed range for this key.
-        return Mth.clamp(super.read(element), getMinInclusive(), getMaxInclusive());
+        float value = super.read(element);
+        return Float.isFinite(value) ? Mth.clamp(value, getMinInclusive(), getMaxInclusive()) : getDefault();
+    }
+
+    @Override
+    public boolean validate(Float value) {
+        return value != null && Float.isFinite(value) && super.validate(value);
     }
 
     @Override

@@ -47,6 +47,10 @@ public class PlayerConfig extends EntityConfig {
     public SyncStatus syncStatus = SyncStatus.UNKNOWN;
     public boolean needsSync;
     public boolean needsCloudSync;
+    public boolean needsBodySync = true;
+    public boolean hasExtendedProfile;
+
+    public void updateBodySettings(BodySettings value) { this.bodySettings = java.util.Objects.requireNonNull(value); }
 
     private boolean hurtSounds = ClientConfiguration.HURT_SOUNDS.getDefault();
     protected boolean holidayThemes = ClientConfiguration.HOLIDAY_THEMES.getDefault();
@@ -221,6 +225,9 @@ public class PlayerConfig extends EntityConfig {
      * @param markForSync {@code true} if {@link #needsSync} should be set to true
      */
     public void loadFromConfig(boolean markForSync) {
+        updateBodySettings(new BodySettings(cfg.get(ClientConfiguration.HIPS), cfg.get(ClientConfiguration.THIGHS),
+                cfg.get(ClientConfiguration.BUTTOCKS), cfg.get(ClientConfiguration.WAIST), cfg.get(ClientConfiguration.BREAST_SHAPE),
+                cfg.get(ClientConfiguration.BODY_PHYSICS), cfg.get(ClientConfiguration.BODY_MOTION)));
         updateGender(cfg.get(ClientConfiguration.GENDER));
         updateBustSize(cfg.get(ClientConfiguration.BUST_SIZE));
         updateHurtSounds(cfg.get(ClientConfiguration.HURT_SOUNDS));
@@ -238,6 +245,7 @@ public class PlayerConfig extends EntityConfig {
 
         if (markForSync) {
             this.needsSync = true;
+            this.needsBodySync = true;
         }
     }
 
@@ -261,6 +269,14 @@ public class PlayerConfig extends EntityConfig {
      */
     public static void saveGenderInfo(PlayerConfig plr) {
         ClientConfiguration config = plr.getConfig();
+        BodySettings body = plr.getBodySettings();
+        config.set(ClientConfiguration.HIPS, body.hips());
+        config.set(ClientConfiguration.THIGHS, body.thighs());
+        config.set(ClientConfiguration.BUTTOCKS, body.buttocks());
+        config.set(ClientConfiguration.WAIST, body.waist());
+        config.set(ClientConfiguration.BREAST_SHAPE, body.shape());
+        config.set(ClientConfiguration.BODY_PHYSICS, body.physics());
+        config.set(ClientConfiguration.BODY_MOTION, body.motion());
         config.set(ClientConfiguration.USERNAME, plr.uuid);
         config.set(ClientConfiguration.GENDER, plr.getGender());
         config.set(ClientConfiguration.BUST_SIZE, plr.getBustSize());
@@ -283,6 +299,7 @@ public class PlayerConfig extends EntityConfig {
 
         config.save();
         plr.needsSync = true;
+        plr.needsBodySync = true;
         plr.needsCloudSync = true;
     }
 

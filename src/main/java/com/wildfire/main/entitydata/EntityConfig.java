@@ -70,14 +70,19 @@ public class EntityConfig {
     // to entities, and are instead entirely in PlayerConfig
     protected final BreastPhysics lBreastPhysics, rBreastPhysics;
     protected final Breasts breasts;
+    protected BodySettings bodySettings = BodySettings.NONE;
+    private final com.wildfire.physics.BodyPhysics bodyPhysics = new com.wildfire.physics.BodyPhysics();
+
+    public BodySettings getBodySettings() { return bodySettings; }
+    public com.wildfire.physics.BodyPhysics getBodyPhysics() { return bodyPhysics; }
     protected boolean jacketLayer = true;
     protected @Nullable BreastDataComponent fromComponent;
 
     protected EntityConfig(UUID uuid) {
         this.uuid = uuid;
         this.breasts = new Breasts();
-        lBreastPhysics = new BreastPhysics(this);
-        rBreastPhysics = new BreastPhysics(this);
+        lBreastPhysics = new BreastPhysics(this,-1);
+        rBreastPhysics = new BreastPhysics(this,1);
     }
 
     /**
@@ -193,6 +198,7 @@ public class EntityConfig {
 
         getLeftBreastPhysics().update(entity, armor);
         getRightBreastPhysics().update(entity, armor);
+        bodyPhysics.update(entity, bodySettings, getGender() == Gender.FEMALE);
     }
 
     @Override

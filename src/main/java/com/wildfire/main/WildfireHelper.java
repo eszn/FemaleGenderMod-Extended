@@ -79,6 +79,10 @@ public class WildfireHelper {
         registrar.playToServer(ServerboundSyncPacket.TYPE, ServerboundSyncPacket.STREAM_CODEC, ServerboundSyncPacket::handle);
         //Server to client
         registrar.playToClient(ClientboundSyncPacket.TYPE, ClientboundSyncPacket.STREAM_CODEC, ClientboundSyncPacket::handle);
+        registrar.playToServer(com.wildfire.main.networking.BodySync.Serverbound.TYPE,
+                com.wildfire.main.networking.BodySync.Serverbound.STREAM_CODEC, com.wildfire.main.networking.BodySync.Serverbound::handle);
+        registrar.playToClient(com.wildfire.main.networking.BodySync.Clientbound.TYPE,
+                com.wildfire.main.networking.BodySync.Clientbound.STREAM_CODEC, com.wildfire.main.networking.BodySync.Clientbound::handle);
     }
 
     public static <ENTITY extends LivingEntity> void withEntityAngles(ENTITY entity, float yBodyRot, float yRot, float xRot, Consumer<ENTITY> runnable) {
